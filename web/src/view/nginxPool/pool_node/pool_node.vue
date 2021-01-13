@@ -1,0 +1,350 @@
+<template>
+    <div class="big">
+        <el-row :gutter="4"  >
+            <el-col :span="4" >
+                <el-card  class="box-card" >
+                    <div  slot="header" class="clearfix label">
+                        <span>Pool集群列表</span>
+                    </div>
+                    <div>
+                        <el-table :data="listData"   style="width: 100%" :show-header="false" :highlight-current-row="true">
+                            <el-table-column    align="left">
+                                <template slot-scope="scope">
+                                    <el-link style="" @click="getPoolNode(scope.row)" >{{ scope.row.PoolName }}</el-link>
+                                </template>
+                            </el-table-column>
+                        </el-table>
+                    </div>
+                </el-card>
+            </el-col>
+            <el-col :span="20">
+                <el-card class="box-card">
+                    <div slot="header" class="clearfix label">
+                        <span>Node节点</span>
+<!--                        <el-button style="float: right; padding: 4px 6px; line-height: 0;" type="text" class="label" @click="publishNginxPool">发布</el-button>-->
+                        <el-button style="float: right; padding: 4px 6px; line-height: 0;" type="text" class="label" @click="openDialog">新增节点</el-button>
+
+                    </div>
+                    <div >
+                        <el-table :data="tableData" style="width: 100%"  >
+                            <el-table-column label="Node名称" prop="NodeName"  align="center">
+                            </el-table-column>
+                            <el-table-column label="IP" prop="IP"  align="center">
+                            </el-table-column>
+                            <el-table-column label="端口" prop="Port"  align="center">
+                            </el-table-column>
+                            <el-table-column label="权重" prop="Weight"  align="center">
+                            </el-table-column>
+                            <el-table-column label="最大失败次数" prop="MaxFailed"  align="center">
+                            </el-table-column>
+                            <el-table-column label="超时时间" prop="TimeOut"  align="center">
+                            </el-table-column>
+                            <el-table-column label="状态" prop="Status"  align="center">
+                            </el-table-column>
+                            <el-table-column label="按钮组">
+                                <template slot-scope="scope">
+                                    <el-button class="table-button" @click="updatePoolNode(scope.row)" size="small" type="primary" icon="el-icon-edit">变更</el-button>
+                                    <el-popover placement="top" width="160" v-model="scope.row.visible">
+                                        <p>确定要删除吗？</p>
+                                        <div style="text-align: right; margin: 0">
+                                            <el-button size="mini" type="text" @click="scope.row.visible = false">取消</el-button>
+                                            <el-button type="primary" size="mini" @click="deletePoolNode(scope.row)">确定</el-button>
+                                        </div>
+                                        <el-button type="danger" icon="el-icon-delete" size="mini" slot="reference">删除</el-button>
+                                    </el-popover>
+                                </template>
+                            </el-table-column>
+                        </el-table>
+                    </div>
+                </el-card>
+            </el-col>
+        </el-row>
+
+        <el-dialog :before-close="closeDialog" :visible.sync="dialogFormVisible" title="新增Node">
+            <el-form :model="formData" label-position="right" label-width="100px">
+                <el-form-item label="Node Name:">
+                    <el-input v-model="formData.NodeName" clearable placeholder="请输入" ></el-input>
+                </el-form-item>
+                <el-form-item label="IP:">
+                    <el-input v-model="formData.IP" clearable placeholder="请输入" ></el-input>
+                </el-form-item>
+                <el-form-item label="端口:">
+                    <el-input v-model="formData.Port" clearable placeholder="请输入" ></el-input>
+                </el-form-item>
+                <el-form-item label="权重:">
+                    <el-input v-model="formData.Weight" clearable placeholder="请输入" ></el-input>
+                </el-form-item>
+                <el-form-item label="最大失败次数:">
+                    <el-input v-model="formData.MaxFailed" clearable placeholder="请输入" ></el-input>
+                </el-form-item>
+                <el-form-item label="超时时间:">
+                    <el-input v-model="formData.TimeOut" clearable placeholder="请输入" ></el-input>
+                </el-form-item>
+                <el-form-item label="状态控制:">
+                    <el-radio-group v-model="formData.Status">
+                        <el-radio  label="Enable" >Enable</el-radio>
+                        <el-radio  label="Disable">Disable</el-radio>
+                    </el-radio-group>
+                </el-form-item>
+            </el-form>
+            <div class="dialog-footer" slot="footer">
+                <el-button @click="closeDialog">取 消</el-button>
+                <el-button @click="enterDialog" type="primary">确 定</el-button>
+            </div>
+        </el-dialog>
+
+<!--        <el-dialog :before-close="closePublishDialog" :visible.sync="dialogPublishFormVisible" title="发布版本">-->
+<!--            <el-form :model="publishData" label-position="right" label-width="150px">-->
+<!--                <el-form-item label="版本信息:">-->
+<!--                    <el-input v-model="publishData.Comment" clearable placeholder="请输入" ></el-input>-->
+<!--                </el-form-item>-->
+<!--            </el-form>-->
+<!--            <div class="dialog-footer" slot="footer">-->
+<!--                <el-button @click="closePublishDialog">取 消</el-button>-->
+<!--                <el-button @click="enterPublishDialog" type="primary">确 定</el-button>-->
+<!--            </div>-->
+<!--        </el-dialog>-->
+
+    </div>
+
+</template>
+
+<style>
+    .box-card {
+        height: 720px;
+    }
+    .item {
+        padding: 10px 0;
+    }
+    .label {
+        font-size: 18px;
+    }
+
+    .clearfix:before,
+
+    .clearfix:after {
+        display: table;
+        content: "";
+    }
+    .clearfix:after {
+        clear: both
+    }
+
+</style>
+
+<script>
+import {
+    createPoolNode,
+    deletePoolNode,
+    deletePoolNodeByIds,
+    updatePoolNode,
+    findPoolNode,
+    getPoolNodeList
+} from "@/api/pool_node";  //  此处请自行替换地址
+import {getAllNginxPoolList} from "@/api/nginx_pool";
+import { formatTimeToStr } from "@/utils/date";
+import { createPublishHistory } from "@/api/nginx_domain_publish_history";  //
+// import infoList from "@/mixins/infoList";
+export default {
+        name: "PoolNode",
+        // mixins: [infoList],
+        data() {
+            return {
+                listApi: getPoolNodeList,
+                dialogFormVisible: false,
+                visible: false,
+                type: "",
+                deleteVisible: false,
+                dialogPublishFormVisible:false,
+                multipleSelection: [],
+                formData: {
+                    NodeName:"",
+                    IP:"",
+                    Port:"",
+                    Weight:"1",
+                    MaxFailed:"2",
+                    TimeOut:"2s",
+                    Status:"Enable",
+                    ClusterId:0,
+                },
+                publishData: {
+                    Comment:"",
+                    User:"",
+                    DomainId:"",
+                    Type:"",
+                    Operate:"",
+                    Status:"执行",
+                },
+                ClusterId:0,
+                ClusterName:"",
+                listData:[],
+                tableData:[],
+            };
+        },
+
+        filters: {
+            formatDate: function(time) {
+                if (time != null && time != "") {
+                    var date = new Date(time);
+                    return formatTimeToStr(date, "yyyy-MM-dd hh:mm:ss");
+                } else {
+                    return "";
+                }
+            },
+            formatBoolean: function(bool) {
+                if (bool != null) {
+                    return bool ? "是" :"否";
+                } else {
+                    return "";
+                }
+            }
+        },
+        mounted(){
+            this.getAllNginxPool()
+        },
+        methods: {
+            //条件搜索前端看此方法
+            onSubmit() {
+                this.page = 1
+                this.pageSize = 10
+                this.getTableData()
+            },
+
+            handleSelectionChange(val) {
+                this.multipleSelection = val
+            },
+            async onDelete() {
+                const ids = []
+                if(this.multipleSelection.length == 0){
+                    this.$message({
+                        type: 'warning',
+                        message: '请选择要删除的数据'
+                    })
+                    return
+                }
+                this.multipleSelection &&
+                this.multipleSelection.map(item => {
+                    ids.push(item.ID)
+                })
+                const res = await deletePoolNodeByIds({ ids })
+                if (res.code == 0) {
+                    this.$message({
+                        type: 'success',
+                        message: '删除成功'
+                    })
+                    this.deleteVisible = false
+                    this.getTableData()
+                }
+            },
+            async getPoolNode(row) {
+                this.ClusterId = this.formData.ClusterId = row.ID
+                this.ClusterName = row.PoolName
+                this.getTableData()
+            },
+
+            async getTableData() {
+                const res = await getPoolNodeList({ ClusterId: this.ClusterId })
+                if (res.code == 0){
+                    this.tableData = res.data.list
+                }
+            },
+            async updatePoolNode(row) {
+                const res = await findPoolNode({ ID: row.ID });
+                this.type = "update";
+                if (res.code == 0) {
+                    this.formData = res.data.rePNode;
+                    this.dialogFormVisible = true;
+                }
+            },
+            closeDialog() {
+                this.dialogFormVisible = false;
+                this.formData = {
+                    NodeName:"",
+                    IP:"",
+                    Port:"",
+                    Weight:"1",
+                    MaxFailed:"2",
+                    TimeOut:"2s",
+                    Status:"Enable",
+                    ClusterId: this.formData.ClusterId,
+                };
+            },
+            async getAllNginxPool(){
+                const res =  await getAllNginxPoolList()
+                if(res.code == 0){
+                    this.listData = res.data.nginxPools
+                }
+            },
+            async deletePoolNode(row) {
+                this.visible = false;
+                const res = await deletePoolNode({ ID: row.ID });
+                if (res.code == 0) {
+                    this.$message({
+                        type: "success",
+                        message: "删除成功"
+                    });
+                    this.getTableData();
+                }
+            },
+            async enterDialog() {
+                let res;
+                switch (this.type) {
+                    case "create":
+                        res = await createPoolNode(this.formData);
+                        break;
+                    case "update":
+                        res = await updatePoolNode(this.formData);
+                        break;
+                    default:
+                        res = await createPoolNode(this.formData);
+                        break;
+                }
+                if (res.code == 0) {
+                    this.$message({
+                        type:"success",
+                        message:"创建/更改成功"
+                    })
+                    this.closeDialog();
+                    this.getTableData();
+                }
+            },
+            openDialog() {
+                this.type = "create";
+                this.dialogFormVisible = true;
+            },
+
+            // async publishNginxPool(){
+            //     this.dialogPublishFormVisible = true;
+            // },
+            // closePublishDialog() {
+            //     this.dialogPublishFormVisible = false;
+            //     this.publishData = {
+            //         Comment:"",
+            //         User:"",
+            //         DomainId:"",
+            //         Type:"",
+            //         Operate:"",
+            //         Status:"执行",
+            //     };
+            // },
+            // async enterPublishDialog() {
+            //     let res;
+            //     this.publishData.ClusterId = this.ClusterId;
+            //     this.publishData.Operate = "发布";
+            //     this.publishData.Type = "部署Pool集群: " + this.ClusterName;
+            //     res = await createPublishHistory(this.publishData);
+            //     if (res.code == 0) {
+            //         this.$message({
+            //             type:"success",
+            //             message:"发布成功"
+            //         })
+            //         this.closePublishDialog();
+            //         this.getDomainPublishHistory();
+            //     }
+            // },
+        },
+        async created() {
+            await this.getTableData();
+        }
+    };
+</script>
